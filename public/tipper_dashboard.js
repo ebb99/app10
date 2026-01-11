@@ -31,7 +31,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         //await ladeSpiele();
         await name_ermitteln();
         await ladeGeplanteSpiele();
-        $("tippenBtn").addEventListener("click", tippen);  
+        await ladeSpieleMitTipps();
+        $("saveAllTips").addEventListener("click", alleTippsSpeichern);
         $("logoutBtn")?.addEventListener("click", logout);     
 
         console.log("✅ Tipper Dashboard bereit");
@@ -41,10 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 });
 
-tippen;
-async function tippen() {
-   alert("Hier geht's zum Tippen!");
-}
+
 
 // Logout
 // ===============================
@@ -52,93 +50,190 @@ async function logout() {
     await api("/api/logout", { method: "POST" });
     location.href = "/";
 }
+// ⚠️ TEMPORÄR – später durch Login / Session ersetzen
+const USER_ID = 1;
 
+// 1️⃣ Geplante Spiele laden
+async function ladeGeplanteSpiele() {
+    const res = await fetch("/api/spiele");
+    const spiele = await res.json();
 
-// ===============================
-// Spiele
-// ===============================
-/*
-async function ladeSpiele() {
-    const spiele = await api("/api/spiele");
-    $("spieleSelect").innerHTML = `<option value="">Bitte wählen …</option>`;
+    const select = document.getElementById("spielSelect");
+    select.innerHTML = '<option value="">Bitte wählen …</option>';
 
     spiele
-        .filter(s => s.statuswort === "geplant")
-        .forEach(s => {
-        const text = `${new Date(s.anstoss).toLocaleString("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short"
-})}
-
-
-${s.heimverein} – ${s.gastverein}`;
-            $("spieleSelect").appendChild(new Option(text, s.id));
+        .filter(spiel => spiel.statuswort === "geplant")
+        .forEach(spiel => {
+            const opt = document.createElement("option");
+            opt.value = spiel.id;
+            opt.textContent =
+                `${spiel.heimverein} – ${spiel.gastverein} (${spiel.anstoss})`;
+            select.appendChild(opt);
         });
-
-
-
-
-
-
-        const tbody = document.getElementById("SpieleTabelle");
-        tbody.innerHTML = "";
-
-        spiele.forEach(s => {
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${s.heimverein}</td>
-                <td>${s.gastverein}</td>
-                <td>${new Date(s.anstoss).toLocaleString("de-DE", {
-                    dateStyle: "short",
-                    timeStyle: "short"  
-                })}</td>
-                <td>${s.heimtore} : ${s.gasttore}</td>
-                <td>${s.statuswort}</td>
-                            `;
-        });
-       
 }
-*/
-// ===============================
-// Geplante Spiele laden
-// ===============================
-async function ladeGeplanteSpiele() {
+
+// 2️⃣ Tipp speichern
+document.getElementById("btnTippen").addEventListener("click", async () => {
+    const spiel_id = document.getElementById("spielSelect").value;
+    const heimtipp = document.getElementById("heimtipp").value;
+    const gasttipp = document.getElementById("gasttipp").value;
+
+    if (!spiel_id) {
+        return zeigeMeldung("Bitte ein Spiel auswählen", "red");
+    }
+
+    if (heimtipp === "" || gasttipp === "") {
+        return zeigeMeldung("Bitte beide Tipps eingeben", "red");
+    }
+
     try {
-        const spiele = await api("/api/spiele");
-        const tbody = $("spieleBody");
-        tbody.innerHTML = "";
-
-        // nur geplante Spiele
-        const geplant = spiele.filter(s => s.statuswort === "geplant");
-
-        if (geplant.length === 0) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="4">Keine geplanten Spiele</td>`;
-            tbody.appendChild(tr);
-            return;
-        }
-
-        geplant.forEach(s => {
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${new Date(s.anstoss).toLocaleString("de-DE", {
-                    dateStyle: "short",
-                    timeStyle: "short"
-                })}</td>
-                <td>${s.heimverein}</td>
-                <td>${s.gastverein}</td>
-                <td>${s.statuswort}</td>
-            `;
-
-            tbody.appendChild(tr);
+        const res = await fetch("/api/tips", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user_id: USER_ID,
+                spiel_id: Number(spiel_id),
+                heimtipp: Number(heimtipp),
+                gasttipp: Number(gasttipp)
+            })
         });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error);
+
+        zeigeMeldung("Tipp gespeichert ✔", "green");
 
     } catch (err) {
-        console.error("❌ Spiele laden fehlgeschlagen:", err);
+        zeigeMeldung(err.message, "red");
+    }
+});
+
+// 3️⃣ Meldungen anzeigen
+function zeigeMeldung(text, farbe) {
+    const el = document.getElementById("meldung");
+    el.textContent = text;
+    el.style.color = farbe;
+}
+
+
+
+
+async function ladeSpieleMitTipps() {
+    const spiele = await api("/api/spiele");
+    const tbody = $("tipTabelle");
+    tbody.innerHTML = "";
+
+    const geplant = spiele.filter(s => s.statuswort === "geplant");
+
+    if (geplant.length === 0) {
+        tbody.innerHTML = `<tr><td>Keine geplanten Spiele</td></tr>`;
+        return;
+    }
+
+    geplant.forEach(s => {
+        // Zeile 1: Datum + Status
+        const tr1 = document.createElement("tr");
+        tr1.innerHTML = `
+            <td colspan="3">
+                📅 ${new Date(s.anstoss).toLocaleString("de-DE")}
+                | Status: <b>${s.statuswort}</b>
+            </td>
+        `;
+
+        // Zeile 2: Heimverein + Tipp
+        const tr2 = document.createElement("tr");
+        tr2.innerHTML = `
+            <td width="40%"><b>${s.heimverein}</b></td>
+            <td width="20%">Heim</td>
+            <td width="40%">
+                <input type="number"
+                       min="0"
+                       data-spiel="${s.id}"
+                       data-team="heim"
+                       class="tippInput">
+            </td>
+        `;
+
+        // Zeile 3: Gastverein + Tipp
+        const tr3 = document.createElement("tr");
+        tr3.innerHTML = `
+            <td><b>${s.gastverein}</b></td>
+            <td>Gast</td>
+            <td>
+                <input type="number"
+                       min="0"
+                       data-spiel="${s.id}"
+                       data-team="gast"
+                       class="tippInput">
+            </td>
+        `;
+
+        // optische Trennung
+        const trSpacer = document.createElement("tr");
+        trSpacer.innerHTML = `<td colspan="3">&nbsp;</td>`;
+
+        tbody.append(tr1, tr2, tr3, trSpacer);
+    });
+}
+
+async function alleTippsSpeichern() {
+    const inputs = document.querySelectorAll(".tippInput");
+
+    // Map: spiel_id → { heimtipp, gasttipp }
+    const tipps = {};
+
+    inputs.forEach(input => {
+        const spielId = input.dataset.spiel;
+        const team = input.dataset.team;
+        const wert = input.value;
+
+        if (!tipps[spielId]) {
+            tipps[spielId] = {};
+        }
+
+        if (wert !== "") {
+            tipps[spielId][team + "tipp"] = Number(wert);
+        }
+    });
+
+    try {
+        for (const spielId in tipps) {
+            const t = tipps[spielId];
+
+            // nur speichern, wenn beide Werte vorhanden
+            if (t.heimtipp == null || t.gasttipp == null) continue;
+
+            await api("/api/tips", {
+                method: "POST",
+                body: JSON.stringify({
+                    spiel_id: spielId,
+                    heimtipp: t.heimtipp,
+                    gasttipp: t.gasttipp
+                })
+            });
+        }
+
+        $("meldung").textContent = "✅ Tipps gespeichert";
+        $("meldung").style.color = "green";
+
+    } catch (err) {
+        console.error(err);
+        $("meldung").textContent = "❌ Fehler beim Speichern";
+        $("meldung").style.color = "red";
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
