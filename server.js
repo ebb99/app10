@@ -1,21 +1,49 @@
 // ===============================
 // ENV
 // ===============================
-if (process.env.NODE_ENV !== "production") {
-    require("dotenv").config();
-}
+require("dotenv").config(); // einmal, ganz oben
 
-console.log("ENV CHECK:", process.env.DATABASE_URL);
+const isRailway = !!process.env.DATABASE_URL;
+
+console.log("ENV MODE:", isRailway ? "RAILWAY" : "LOCAL");
+console.log("ENV DATABASE_URL:", process.env.DATABASE_URL ? "OK" : "—");
+console.log("ENV DB_HOST:", process.env.DB_HOST || "—");
 
 // ===============================
 // Imports
 // ===============================
 const express = require("express");
-const pg = require("pg");
 const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const { Pool } = require("pg");
+
+// ===============================
+// Datenbank (LOCAL + RAILWAY)
+// ===============================
+const pool = isRailway
+    ? new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false }
+      })
+    : new Pool({
+          host: process.env.DB_HOST,
+          port: Number(process.env.DB_PORT),
+          database: process.env.DB_NAME,
+          user: process.env.DB_USER,
+          password: String(process.env.DB_PASSWORD)
+      });
+
+pool.connect()
+    .then(client => {
+        client.release();
+        console.log("✅ PostgreSQL verbunden");
+    })
+    .catch(err => {
+        console.error("❌ DB Fehler:", err.message);
+        process.exit(1);
+    });
 
 // ===============================
 // App
@@ -24,74 +52,14 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // ===============================
-// Konstanten
-// ===============================
-const SPIELZEIT_MINUTEN = 3;
-const NACHSPIELZEIT_MINUTEN = 2;
-
-// ===============================
-// Middleware
-// ===============================
-app.use(express.json());
-app.use(express.static("public"));
-
-app.use(session({
-    secret: process.env.SESSION_SECRET || "super-geheim",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24
-    }
-}));
-
-// ===============================
-// Auth Middleware (NUR API)
-// ===============================
-function requireLogin(req, res, next) {
-    if (!req.session.user) {
-        return res.status(401).json({ error: "Login erforderlich" });
-    }
-    next();
-}
-
-function requireAdmin(req, res, next) {
-    if (!req.session.user || req.session.user.role !== "admin") {
-        return res.status(403).json({ error: "Nur Admin" });
-    }
-    next();
-}
-
-function requireTipper(req, res, next) {
-    if (!req.session.user || req.session.user.role !== "tipper") {
-        return res.status(403).json({ error: "Nur Tipper erlaubt" });
-    }
-    next();
-}
-
-// ===============================
-// Datenbank
-// ===============================
-const isRailway =
-    process.env.DATABASE_URL &&
-    !process.env.DATABASE_URL.includes("localhost");
-
-const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: isRailway ? { rejectUnauthorized: false } : false
-});
-
-pool.connect()
-    .then(c => {
-        c.release();
-        console.log("PostgreSQL verbunden");
-    })
-    .catch(err => console.error("DB Fehler:", err));
-
-// ===============================
 // Cron Jobs
 // ===============================
+
+
+const SPIELZEIT_MINUTEN = 2;
+const NACHSPIELZEIT_MINUTEN = 1;
+
+
 cron.schedule("* * * * *", async () => {
     try {
         await pool.query(`
@@ -115,35 +83,32 @@ cron.schedule("* * * * *", async () => {
     }
 });
 
-
-
-
-async function werteSpielAus(spielId) {
-    const spielRes = await pool.query(
-        "SELECT * FROM spiele WHERE id=$1",
-        [spielId]
-    );
-    const spiel = spielRes.rows[0];
-
-    const tipsRes = await pool.query(
-        "SELECT * FROM tips WHERE spiel_id=$1",
-        [spielId]
-    );
-
-    for (const tipp of tipsRes.rows) {
-        const punkte = berechnePunkte(tipp, spiel);
-
-        await pool.query(
-            "UPDATE tips SET punkte=$1 WHERE id=$2",
-            [punkte, tipp.id]
-        );
+// ===============================
+// Auth Middleware
+// ===============================
+function requireLogin(req, res, next) {
+    if (!req.session.user) {
+        return res.status(401).json({ error: "Login erforderlich" });
     }
-
-    await pool.query(
-        "UPDATE spiele SET statuswort='ausgewertet' WHERE id=$1",
-        [spielId]
-    );
+    next();
 }
+
+function requireAdmin(req, res, next) {
+    if (!req.session.user || req.session.user.role !== "admin") {
+        return res.status(403).json({ error: "Nur Admin erlaubt" });
+    }
+    next();
+}
+
+function requireTipper(req, res, next) {
+    if (!req.session.user || req.session.user.role !== "tipper") {
+        return res.status(403).json({ error: "Nur Tipper erlaubt" });
+    }
+    next();
+}
+
+
+
 app.get("/api/rangliste", requireLogin, async (req, res) => {
     const result = await pool.query(`
     SELECT u.name, COALESCE(SUM(t.punkte),0) AS punkte
