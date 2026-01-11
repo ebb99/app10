@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tippen & Rangliste</title>
+    <link rel="stylesheet" href="tipper_dashboard.css">
+    <script src="/auth.js"></script>
+    <script src="tipper_dashboard.js"></script>
+ </head>
+
+<body>
+<!-- ===================== -->
+<!-- TIPP ABGEBEN -->
+<!-- ===================== -->
+ <div id="top1">
+    <h2>⛹️ Mitspieler-Dashboard</h2>
+</div>
+
+<div id="top2">
+    <h2>👥 Willkommen <span id="benutzername"></span>!</h2>
+    <button id="logoutBtn">Logout</button>
+</div>
+
+<div class="ueberschrift">
+    <h2>📓  Spiele tippen</h2>
+    <button id="tippenBtn">Tippen</button>
+</div> 
+<h2>📅 Geplante Spiele</h2>
+
+<table border="1" width="100%">
+    <thead>
+        <tr>
+            <th>Datum</th>
+            <th>Heim</th>
+            <th>Gast</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody id="spieleBody"></tbody>
+</table>
+
+
+<div class="ueberschrift">
+    <h2>😉👓  Alle Tips</h2>
+    <button id="TipsAnsehenBtn">ansehen</button>
+</div>
+
+<div class="ueberschrift">
+    <h2>🏆 Rangliste</h2>
+    <button id="RanglisteAnsehenBtn">ansehen</button>
+</div>
+<label for="spieleSelect">Geplantes Spiel</label>
+<select id="spieleSelect">
+    <option value="">Bitte wählen …</option>
+</select>
+
+
+
+
+
+
+</body>
+</html>
