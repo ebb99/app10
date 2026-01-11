@@ -1,40 +1,74 @@
+/**
+ * set-admin.js
+ * Usage:
+ *   node set-admin.js <username> <password>
+ */
+
 require("dotenv").config();
-const pg = require("pg");
+const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 
-const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Railway braucht SSL
-});
+// ===============================
+// CLI Parameter
+// ===============================
+const [, , username, password] = process.argv;
 
-async function setAdmin() {
-    const name = process.env.ADMIN_NAME || "admin";
-    const password = process.env.ADMIN_PASSWORD;
-    const role = "admin";
-
-    if (!password) {
-        throw new Error("❌ ADMIN_PASSWORD ist nicht gesetzt");
-    }
-
-    const hash = await bcrypt.hash(password, 12);
-
-    await pool.query(
-        `
-        INSERT INTO users (name, password, role)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (name)
-        DO UPDATE SET
-            password = EXCLUDED.password,
-            role = EXCLUDED.role
-        `,
-        [name, hash, role]
-    );
-
-    console.log("✅ Admin auf Railway gesetzt / aktualisiert");
-    process.exit(0);
+if (!username || !password) {
+    console.error("❌ Usage: node set-admin.js <username> <password>");
+    process.exit(1);
 }
 
-setAdmin().catch(err => {
-    console.error("❌ Fehler:", err.message);
-    process.exit(1);
+// ===============================
+// DB Verbindung
+// ===============================
+const pool = new Pool({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST || "localhost",
+    port: Number(process.env.DB_PORT) || 5432
 });
+
+// ===============================
+// Admin setzen
+// ===============================
+async function setAdmin() {
+    try {
+        const hash = await bcrypt.hash(password, 10);
+
+        const existing = await pool.query(
+            "SELECT id FROM users WHERE name = $1",
+            [username]
+        );
+
+        if (existing.rowCount > 0) {
+            await pool.query(
+                `
+                UPDATE users
+                SET password = $1, role = 'admin'
+                WHERE name = $2
+                `,
+                [hash, username]
+            );
+
+            console.log(`✅ Admin '${username}' aktualisiert`);
+        } else {
+            await pool.query(
+                `
+                INSERT INTO users (name, password, role)
+                VALUES ($1, $2, 'admin')
+                `,
+                [username, hash]
+            );
+
+            console.log(`✅ Admin '${username}' angelegt`);
+        }
+
+    } catch (err) {
+        console.error("❌ Fehler:", err.message);
+    } finally {
+        await pool.end();
+    }
+}
+
+setAdmin();
