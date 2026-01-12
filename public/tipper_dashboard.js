@@ -233,34 +233,6 @@ async function alleTippsSpeichern() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
-
-
- 
-
-
-
 async function name_ermitteln(requiredRole = null) {
     const res = await fetch("/api/session", {
         credentials: "include"
