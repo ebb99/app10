@@ -297,11 +297,9 @@ app.delete("/api/vereine/:id", requireAdmin, async (req, res) => {
 });
 
 
-
-
-
+/*
 // ===============================
-// Spiele API
+// Spiele API alt
 // ===============================
 app.get("/api/spiele", requireLogin, async (req, res) => {
     try {
@@ -317,6 +315,45 @@ app.get("/api/spiele", requireLogin, async (req, res) => {
         res.status(500).json({ error: "Fehler beim Laden der Spiele" });
     }
 });
+
+*/
+// ===============================
+// Spiele + eigene Tipps neu
+// ===============================
+app.get("/api/spiele", requireLogin, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+
+        const result = await pool.query(`
+            SELECT
+                s.id,
+                s.anstoss,
+                s.heimverein,
+                s.gastverein,
+                s.statuswort,
+                t.heimtipp,
+                t.gasttipp
+            FROM spiele s
+            LEFT JOIN tips t
+              ON t.spiel_id = s.id
+             AND t.user_id = $1
+            ORDER BY s.anstoss
+        `, [userId]);
+
+        res.json(result.rows);
+
+    } catch (err) {
+        console.error("❌ /api/spiele:", err);
+        res.status(500).json({ error: "Spiele laden fehlgeschlagen" });
+    }
+});
+
+
+
+
+
+
+
 
 
 app.post("/api/spiele", requireAdmin, async (req, res) => {
