@@ -246,7 +246,7 @@ async function ergebnisSpeichernUndAuswerten() {
     const gasttore = Number($("gasttoreInput").value);
 
     try {
-        const res = await api(`/api/spiele/${id}/auswerten`, {
+        const res = await api(`/api/spiele/${id}/ergebnis`, {
             method: "PATCH",
             body: JSON.stringify({ heimtore, gasttore })
         });
