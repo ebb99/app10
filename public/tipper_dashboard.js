@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         await checkSession("tipper");
         await name_ermitteln();
-        await ladeSpiele();
+        //await ladeSpiele();
         await ladeTipps();
         await ladeRangliste();
         await ladeSpieleMitTipps();
