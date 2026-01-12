@@ -78,11 +78,14 @@ async function ladeSpieleMitTipps() {
 
     const geplant = spiele.filter(s => s.statuswort === "geplant");
 
+
     if (geplant.length === 0) {
         tbody.innerHTML = `<tr><td>Keine geplanten Spiele</td></tr>`;
         return;
     }
 
+
+    
     geplant.forEach(s => {
         // Zeile 1: Datum + Status
         const tr1 = document.createElement("tr");
