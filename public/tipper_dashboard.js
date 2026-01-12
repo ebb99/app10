@@ -165,7 +165,7 @@ async function alleTippsSpeichern() {
                 })
             });
         }
-
+        ladeTipps();
         $("meldung").textContent = "✅ Tipps gespeichert";
         $("meldung").style.color = "green";
 

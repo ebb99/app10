@@ -110,3 +110,6 @@
         .ueberschrift,button {
             margin-bottom: -10px;
         }   
+        #saveAllTips {
+          margin-top: 10px;
+        }
