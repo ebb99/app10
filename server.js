@@ -116,7 +116,7 @@ cron.schedule("* * * * *", async () => {
 });
 
 
-
+/*
 
 async function werteSpielAus(spielId) {
     const spielRes = await pool.query(
@@ -144,6 +144,8 @@ async function werteSpielAus(spielId) {
         [spielId]
     );
 }
+
+*/
 app.get("/api/rangliste", requireLogin, async (req, res) => {
     const result = await pool.query(`
     SELECT u.name, COALESCE(SUM(t.punkte),0) AS punkte
@@ -297,26 +299,7 @@ app.delete("/api/vereine/:id", requireAdmin, async (req, res) => {
 });
 
 
-/*
-// ===============================
-// Spiele API alt
-// ===============================
-app.get("/api/spiele", requireLogin, async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT id, anstoss, heimverein, gastverein,
-                    heimtore, gasttore, statuswort
-             FROM spiele
-             ORDER BY anstoss`
-        );
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Fehler beim Laden der Spiele" });
-    }
-});
 
-*/
 // ===============================
 // Spiele + eigene Tipps neu
 // ===============================
@@ -347,13 +330,6 @@ app.get("/api/spiele", requireLogin, async (req, res) => {
         res.status(500).json({ error: "Spiele laden fehlgeschlagen" });
     }
 });
-
-
-
-
-
-
-
 
 
 app.post("/api/spiele", requireAdmin, async (req, res) => {
@@ -510,10 +486,10 @@ app.post("/api/tips", requireLogin, requireTipper, async (req, res) => {
 });
 
 
-/*
+
 // ===============================
-// Tipps anzeigen (für Dashboard)
-// ===============================  alt
+// Alle Tipps anzeigen (für alle User)
+// ===============================
 app.get("/api/tips", requireLogin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -522,48 +498,29 @@ app.get("/api/tips", requireLogin, async (req, res) => {
                 t.spiel_id,
                 t.heimtipp,
                 t.gasttipp,
+                t.punkte,
+                t.updated_at,
+
                 u.name AS user_name,
+
+                s.anstoss,
                 s.heimverein,
                 s.gastverein,
-                s.anstoss,
+                s.heimtore,
+                s.gasttore,
                 s.statuswort
+
             FROM tips t
             JOIN users u ON u.id = t.user_id
             JOIN spiele s ON s.id = t.spiel_id
+
             ORDER BY s.anstoss, u.name
         `);
 
         res.json(result.rows);
+
     } catch (err) {
-        console.error("❌ GET /api/tips:", err);
-        res.status(500).json({ error: "Tipps laden fehlgeschlagen" });
-    }
-});
-
-*/
-
-
-app.get("/api/tips", requireLogin, async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT
-                t.spiel_id,
-                u.name AS user_name,
-                t.heimtipp,
-                t.gasttipp,
-                s.heimverein,
-                s.gastverein,
-                s.anstoss,
-                s.statuswort
-            FROM tips t
-            JOIN users u ON u.id = t.user_id
-            JOIN spiele s ON s.id = t.spiel_id
-            ORDER BY s.anstoss, u.name
-        `);
-
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
+        console.error("❌ /api/tips:", err);
         res.status(500).json({ error: "Tipps laden fehlgeschlagen" });
     }
 });
@@ -628,107 +585,7 @@ app.delete("/api/users/:id", requireAdmin, async (req, res) => {
 });
 
 
-/*
-// ===============================
-// Ergebnis eintragen & auswerten alt
-// ===============================
-app.patch("/api/spiele/:id/ergebnis",
-  requireLogin,
-  requireAdmin,
-  async (req, res) => {
-    const spielId = req.params.id;
-    const { heimtore, gasttore } = req.body;
 
-    if (
-      heimtore === undefined ||
-      gasttore === undefined
-    ) {
-      return res.status(400).json({ error: "Ergebnis fehlt" });
-    }
-
-    const client = await pool.connect();
-
-    try {
-      await client.query("BEGIN");
-
-      // 1️⃣ Spiel prüfen
-      const spielRes = await client.query(
-        "SELECT * FROM spiele WHERE id = $1",
-        [spielId]
-      );
-
-      if (spielRes.rowCount === 0) {
-        throw new Error("Spiel nicht gefunden");
-      }
-
-      const spiel = spielRes.rows[0];
-
-      if (spiel.statuswort === "beendet") {
-        throw new Error("Spiel bereits ausgewertet");
-      }
-
-      // 2️⃣ Spiel aktualisieren
-      await client.query(
-        `
-        UPDATE spiele
-        SET heimtore = $1,
-            gasttore = $2,
-            statuswort = 'beendet'
-        WHERE id = $3
-        `,
-        [heimtore, gasttore, spielId]
-      );
-
-      // 3️⃣ Tipps laden
-      const tipsRes = await client.query(
-        "SELECT * FROM tips WHERE spiel_id = $1",
-        [spielId]
-      );
-
-      // 4️⃣ Punkte berechnen
-      for (const tipp of tipsRes.rows) {
-        let punkte = 0;
-
-        // exakt
-        if (
-          tipp.heimtipp === heimtore &&
-          tipp.gasttipp === gasttore
-        ) {
-          punkte = 3;
-        }
-        // richtige Tendenz
-        else if (
-          (tipp.heimtipp - tipp.gasttipp) *
-          (heimtore - gasttore) > 0
-        ) {
-          punkte = 1;
-        }
-
-        await client.query(
-          "UPDATE tips SET punkte = $1 WHERE id = $2",
-          [punkte, tipp.id]
-        );
-      }
-
-      await client.query("COMMIT");
-
-      res.json({
-        success: true,
-        message: "Ergebnis gespeichert & Punkte berechnet",
-        ausgewerteteTipps: tipsRes.rowCount
-      });
-
-    } catch (err) {
-      await client.query("ROLLBACK");
-      console.error("❌ Ergebnis-Auswertung:", err);
-      res.status(400).json({ error: err.message });
-    } finally {
-      client.release();
-    }
-  }
-);
-
-*/
 
 
 // ===============================

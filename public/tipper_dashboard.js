@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         await checkSession("tipper");
         //await ladeSpiele();
+        await ladeTipps();
         await name_ermitteln();
         //await ladeGeplanteSpiele();
         await ladeSpieleMitTipps();
@@ -254,6 +255,57 @@ async function name_ermitteln(requiredRole = null) {
     //console.log("Eingeloggt als:", data.user);
     $("benutzername").innerHTML = data.user.name;
     return data.user;
+}
+
+async function ladeTipps() {
+    const tips = await api("/api/tips");
+
+    const container = document.getElementById("tipListe");
+    container.innerHTML = "";
+
+    const spieleMap = {};
+
+    // Gruppieren nach Spiel
+    tips.forEach(t => {
+        if (!spieleMap[t.spiel_id]) {
+            spieleMap[t.spiel_id] = {
+                spiel: t,
+                tips: []
+            };
+        }
+        spieleMap[t.spiel_id].tips.push(t);
+    });
+
+    // Rendern
+    Object.values(spieleMap).forEach(gruppe => {
+        const spielDiv = document.createElement("div");
+        spielDiv.className = "spiel";
+
+        spielDiv.innerHTML = `
+            <h3>${gruppe.spiel.heimverein} – ${gruppe.spiel.gastverein}</h3>
+            <div class="status">
+                ${new Date(gruppe.spiel.anstoss).toLocaleString("de-DE")}
+                | Status: ${gruppe.spiel.statuswort}
+                | Ergebnis: ${gruppe.spiel.heimtore ?? "-"} :
+                  ${gruppe.spiel.gasttore ?? "-"}
+            </div>
+        `;
+
+        gruppe.tips.forEach(tipp => {
+            const row = document.createElement("div");
+            row.className = "tipp";
+
+            row.innerHTML = `
+                <span class="name">${tipp.user_name}</span>
+                <span>${tipp.heimtipp} : ${tipp.gasttipp}</span>
+                <span>${tipp.punkte ?? 0} P</span>
+            `;
+
+            spielDiv.appendChild(row);
+        });
+
+        container.appendChild(spielDiv);
+    });
 }
 
 
