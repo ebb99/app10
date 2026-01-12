@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         await checkSession("tipper");
         //await ladeSpiele();
         await name_ermitteln();
-        await ladeGeplanteSpiele();
+        //await ladeGeplanteSpiele();
         await ladeSpieleMitTipps();
         $("saveAllTips").addEventListener("click", alleTippsSpeichern);
         $("logoutBtn")?.addEventListener("click", logout);     
@@ -51,8 +51,10 @@ async function logout() {
     location.href = "/";
 }
 // ⚠️ TEMPORÄR – später durch Login / Session ersetzen
-const USER_ID = 1;
+//const USER_ID = 1;
 
+
+/*
 // 1️⃣ Geplante Spiele laden
 async function ladeGeplanteSpiele() {
     const res = await fetch("/api/spiele");
@@ -71,6 +73,9 @@ async function ladeGeplanteSpiele() {
             select.appendChild(opt);
         });
 }
+
+*/
+/*
 
 // 2️⃣ Tipp speichern
 document.getElementById("btnTippen").addEventListener("click", async () => {
@@ -108,6 +113,8 @@ document.getElementById("btnTippen").addEventListener("click", async () => {
         zeigeMeldung(err.message, "red");
     }
 });
+
+*/
 
 // 3️⃣ Meldungen anzeigen
 function zeigeMeldung(text, farbe) {
