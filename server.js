@@ -372,80 +372,64 @@ app.post("/api/spiele", requireAdmin, async (req, res) => {
     }
 });
 
-app.patch("/api/spiele/:id/auswerten", requireAdmin, async (req, res) => {
-    const { heimtore, gasttore } = req.body;
+app.patch("/api/spiele/:id/ergebnis", requireAdmin, async (req, res) => {
     const spielId = req.params.id;
-
-    const client = await pool.connect();
+    const { heimtore, gasttore } = req.body;
 
     try {
-        await client.query("BEGIN");
-
         // 1️⃣ Spiel aktualisieren
-        const spielRes = await client.query(`
+        const spielRes = await pool.query(`
             UPDATE spiele
-            SET heimtore = $1,
+            SET
+                heimtore = $1,
                 gasttore = $2,
                 statuswort = 'ausgewertet'
             WHERE id = $3
             RETURNING *
         `, [heimtore, gasttore, spielId]);
 
-        if (spielRes.rowCount === 0) {
-            throw new Error("Spiel nicht gefunden");
+        if (!spielRes.rows.length) {
+            return res.status(404).json({ error: "Spiel nicht gefunden" });
         }
 
-        // 2️⃣ Alte Punkte löschen (wichtig für Korrektur!)
-        await client.query(`
-            UPDATE tips
-            SET punkte = 0
-            WHERE spiel_id = $1
-        `, [spielId]);
-
-        // 3️⃣ Tipps laden
-        const tipsRes = await client.query(`
+        // 2️⃣ Tipps auswerten
+        const tips = await pool.query(`
             SELECT id, heimtipp, gasttipp
             FROM tips
             WHERE spiel_id = $1
         `, [spielId]);
 
-        // 4️⃣ Punkte berechnen
-        for (const t of tipsRes.rows) {
+        for (const t of tips.rows) {
             let punkte = 0;
 
-            const richtigesErgebnis =
-                t.heimtipp === heimtore &&
-                t.gasttipp === gasttore;
+            if (t.heimtipp === heimtore && t.gasttipp === gasttore) {
+                punkte = 3;
+            } else if (
+                (t.heimtipp - t.gasttipp) * (heimtore - gasttore) > 0
+                || (t.heimtipp === t.gasttipp && heimtore === gasttore)
+            ) {
+                punkte = 1;
+            }
 
-            const richtigeTendenz =
-                Math.sign(t.heimtipp - t.gasttipp) ===
-                Math.sign(heimtore - gasttore);
-
-            if (richtigesErgebnis) punkte = 3;
-            else if (richtigeTendenz) punkte = 1;
-
-            await client.query(`
+            await pool.query(`
                 UPDATE tips
                 SET punkte = $1
                 WHERE id = $2
             `, [punkte, t.id]);
         }
 
-        await client.query("COMMIT");
-
         res.json({
-            message: "Ergebnis gespeichert & Punkte neu berechnet",
-            spiel: spielRes.rows[0]
+            success: true,
+            spiel: spielRes.rows[0],
+            ausgewerteteTipps: tips.rows.length
         });
 
     } catch (err) {
-        await client.query("ROLLBACK");
-        console.error("❌ Auswertung Fehler:", err);
+        console.error("❌ Ergebnis auswerten:", err);
         res.status(500).json({ error: "Auswertung fehlgeschlagen" });
-    } finally {
-        client.release();
     }
 });
+
 
 // ===============================
 // Spiel löschen (ADMIN)
@@ -587,17 +571,25 @@ app.get("/api/tips", requireLogin, async (req, res) => {
 
 
 app.get("/api/rangliste", requireLogin, async (req, res) => {
-    const result = await pool.query(`
-        SELECT u.name, COALESCE(SUM(t.punkte),0) AS punkte
-        FROM users u
-        LEFT JOIN tips t ON t.user_id = u.id
-        WHERE u.role = 'tipper'
-        GROUP BY u.id
-        ORDER BY punkte DESC, u.name
-    `);
+    try {
+        const result = await pool.query(`
+            SELECT
+                u.id,
+                u.name,
+                COALESCE(SUM(t.punkte), 0) AS punkte
+            FROM users u
+            LEFT JOIN tips t ON t.user_id = u.id
+            GROUP BY u.id
+            ORDER BY punkte DESC, u.name
+        `);
 
-    res.json(result.rows);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("❌ Rangliste:", err);
+        res.status(500).json({ error: "Rangliste fehlgeschlagen" });
+    }
 });
+
 
 
 // ===============================
@@ -635,11 +627,12 @@ app.delete("/api/users/:id", requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
+
+/*
 // ===============================
-// Ergebnis eintragen & auswerten
+// Ergebnis eintragen & auswerten alt
 // ===============================
-app.patch(
-  "/api/spiele/:id/ergebnis",
+app.patch("/api/spiele/:id/ergebnis",
   requireLogin,
   requireAdmin,
   async (req, res) => {
@@ -735,7 +728,7 @@ app.patch(
   }
 );
 
-
+*/
 
 
 // ===============================
