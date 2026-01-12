@@ -525,9 +525,11 @@ app.post("/api/tips", requireLogin, requireTipper, async (req, res) => {
     }
 });
 
+
+/*
 // ===============================
 // Tipps anzeigen (für Dashboard)
-// ===============================
+// ===============================  alt
 app.get("/api/tips", requireLogin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -553,6 +555,35 @@ app.get("/api/tips", requireLogin, async (req, res) => {
         res.status(500).json({ error: "Tipps laden fehlgeschlagen" });
     }
 });
+
+*/
+
+
+app.get("/api/tips", requireLogin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                t.spiel_id,
+                u.name AS user_name,
+                t.heimtipp,
+                t.gasttipp,
+                s.heimverein,
+                s.gastverein,
+                s.anstoss,
+                s.statuswort
+            FROM tips t
+            JOIN users u ON u.id = t.user_id
+            JOIN spiele s ON s.id = t.spiel_id
+            ORDER BY s.anstoss, u.name
+        `);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Tipps laden fehlgeschlagen" });
+    }
+});
+
 
 
 app.get("/api/rangliste", requireLogin, async (req, res) => {
