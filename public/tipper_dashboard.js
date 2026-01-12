@@ -28,22 +28,28 @@ function $(id) {
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         await checkSession("tipper");
-        //await ladeSpiele();
-        await ladeTipps();
         await name_ermitteln();
-        //await ladeGeplanteSpiele();
+        await ladeSpiele();
+        await ladeTipps();
+        await ladeRangliste();
         await ladeSpieleMitTipps();
+        $("saveAllTips").addEventListener("click", tippSpeichern);
+        $("logoutBtn")?.addEventListener("click", logout);
+
+           //await ladeGeplanteSpiele();
+       
         $("saveAllTips").addEventListener("click", alleTippsSpeichern);
-        $("logoutBtn")?.addEventListener("click", logout);     
+             
+
+
 
         console.log("✅ Tipper Dashboard bereit");
+
     } catch (err) {
-        console.error(err);
+        console.error("❌ Zugriff verweigert", err);
         location.href = "/";
     }
 });
-
-
 
 // Logout
 // ===============================
@@ -51,73 +57,11 @@ async function logout() {
     await api("/api/logout", { method: "POST" });
     location.href = "/";
 }
-// ⚠️ TEMPORÄR – später durch Login / Session ersetzen
-//const USER_ID = 1;
 
 
-/*
-// 1️⃣ Geplante Spiele laden
-async function ladeGeplanteSpiele() {
-    const res = await fetch("/api/spiele");
-    const spiele = await res.json();
 
-    const select = document.getElementById("spielSelect");
-    select.innerHTML = '<option value="">Bitte wählen …</option>';
 
-    spiele
-        .filter(spiel => spiel.statuswort === "geplant")
-        .forEach(spiel => {
-            const opt = document.createElement("option");
-            opt.value = spiel.id;
-            opt.textContent =
-                `${spiel.heimverein} – ${spiel.gastverein} (${spiel.anstoss})`;
-            select.appendChild(opt);
-        });
-}
 
-*/
-/*
-
-// 2️⃣ Tipp speichern
-document.getElementById("btnTippen").addEventListener("click", async () => {
-    const spiel_id = document.getElementById("spielSelect").value;
-    const heimtipp = document.getElementById("heimtipp").value;
-    const gasttipp = document.getElementById("gasttipp").value;
-
-    if (!spiel_id) {
-        return zeigeMeldung("Bitte ein Spiel auswählen", "red");
-    }
-
-    if (heimtipp === "" || gasttipp === "") {
-        return zeigeMeldung("Bitte beide Tipps eingeben", "red");
-    }
-
-    try {
-        const res = await fetch("/api/tips", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                user_id: USER_ID,
-                spiel_id: Number(spiel_id),
-                heimtipp: Number(heimtipp),
-                gasttipp: Number(gasttipp)
-            })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error);
-
-        zeigeMeldung("Tipp gespeichert ✔", "green");
-
-    } catch (err) {
-        zeigeMeldung(err.message, "red");
-    }
-});
-
-*/
-
-// 3️⃣ Meldungen anzeigen
 function zeigeMeldung(text, farbe) {
     const el = document.getElementById("meldung");
     el.textContent = text;
@@ -234,6 +178,9 @@ async function alleTippsSpeichern() {
 
 
 
+
+
+
 async function name_ermitteln(requiredRole = null) {
     const res = await fetch("/api/session", {
         credentials: "include"
@@ -257,15 +204,71 @@ async function name_ermitteln(requiredRole = null) {
     return data.user;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+// ===============================
+// Spiele laden
+// ===============================
+async function ladeSpiele() {
+    const spiele = await api("/api/spiele");
+
+    $("spieleSelect").innerHTML = '<option value="">Spiel wählen …</option>';
+
+    spiele
+        .filter(s => s.statuswort === "geplant")
+        .forEach(s => {
+            const text = `${new Date(s.anstoss).toLocaleString("de-DE")}
+${s.heimverein} : ${s.gastverein}`;
+
+            $("spieleSelect").appendChild(new Option(text, s.id));
+        });
+}
+
+// ===============================
+// Tipp speichern
+// ===============================
+async function tippSpeichern() {
+    const spiel_id = $("spieleSelect").value;
+    const heimtipp = Number($("heimtipp").value);
+    const gasttipp = Number($("gasttipp").value);
+
+    if (!spiel_id) return alert("Spiel wählen");
+    if (isNaN(heimtipp) || isNaN(gasttipp)) return alert("Tipp fehlt");
+
+    await api("/api/tips", {
+        method: "POST",
+        body: JSON.stringify({ spiel_id, heimtipp, gasttipp })
+    });
+
+    $("meldung").innerText = "✅ Tipp gespeichert";
+
+    $("heimtipp").value = "";
+    $("gasttipp").value = "";
+
+    ladeTipps();
+    ladeRangliste();
+}
+
+// ===============================
+// Alle Tipps anzeigen
+// ===============================
 async function ladeTipps() {
     const tips = await api("/api/tips");
+    const container = $("tipListe");
 
-    const container = document.getElementById("tipListe");
     container.innerHTML = "";
 
     const spieleMap = {};
 
-    // Gruppieren nach Spiel
     tips.forEach(t => {
         if (!spieleMap[t.spiel_id]) {
             spieleMap[t.spiel_id] = {
@@ -276,13 +279,12 @@ async function ladeTipps() {
         spieleMap[t.spiel_id].tips.push(t);
     });
 
-    // Rendern
     Object.values(spieleMap).forEach(gruppe => {
-        const spielDiv = document.createElement("div");
-        spielDiv.className = "spiel";
+        const div = document.createElement("div");
+        div.className = "spiel";
 
-        spielDiv.innerHTML = `
-            <h3>${gruppe.spiel.heimverein} – ${gruppe.spiel.gastverein}</h3>
+        div.innerHTML = `
+            <strong>${gruppe.spiel.heimverein} – ${gruppe.spiel.gastverein}</strong>
             <div class="status">
                 ${new Date(gruppe.spiel.anstoss).toLocaleString("de-DE")}
                 | Status: ${gruppe.spiel.statuswort}
@@ -294,20 +296,34 @@ async function ladeTipps() {
         gruppe.tips.forEach(tipp => {
             const row = document.createElement("div");
             row.className = "tipp";
-
             row.innerHTML = `
-                <span class="name">${tipp.user_name}</span>
+                <span>${tipp.user_name}</span>
                 <span>${tipp.heimtipp} : ${tipp.gasttipp}</span>
                 <span>${tipp.punkte ?? 0} P</span>
             `;
-
-            spielDiv.appendChild(row);
+            div.appendChild(row);
         });
 
-        container.appendChild(spielDiv);
+        container.appendChild(div);
     });
 }
 
+// ===============================
+// Rangliste
+// ===============================
+async function ladeRangliste() {
+    const data = await api("/api/rangliste");
 
+    const tbody = $("ranglisteBody");
+    tbody.innerHTML = "";
 
-
+    data.forEach((u, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td>${u.name}</td>
+            <td>${u.punkte}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
