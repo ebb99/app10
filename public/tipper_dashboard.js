@@ -105,7 +105,8 @@ async function ladeSpieleMitTipps() {
     tbody.innerHTML = "";
     //zeigeTestMeldung(`${spiele} alle Spiele `, "blue");
     
-    const geplant = spiele.filter(s => s.statuswort === "geplant");
+    //const geplant = spiele.filter(s => s.statuswort === "geplant");
+    const geplant = spiele.filter(s => new Date(s.anstoss) > new Date());
 
     //zeigeTestjson (spiele, "blue");
     if (geplant.length === 0) {
@@ -114,11 +115,12 @@ async function ladeSpieleMitTipps() {
         return;
     }
 
-    //zeigeTestMeldung(`${geplant.length} Spiele geladen`, "green");
+    //zeigeTestMeldung(`${geplant.length} Spiele geladen`, "green")
     
     geplant.forEach(s => {
         // Zeile 1: Datum + Status
-        const tr1 = document.createElement("tr");        tr1.innerHTML = `
+        const tr1 = document.createElement("tr");
+         tr1.innerHTML = `
             <td colspan="3">
                 📅 ${new Date(s.anstoss).toLocaleString("de-DE")}
                 | Status: <b>${s.statuswort}</b>
