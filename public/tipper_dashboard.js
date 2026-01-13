@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
        
         $("saveAllTips").addEventListener("click", alleTippsSpeichern);
         $("testBtn").addEventListener("click", TestMeldunglöschen);
-        console.log("✅ Tipper Dashboard bereit");
+        //console.log("✅ Tipper Dashboard bereit");
 
     } catch (err) {
         console.error("❌ Zugriff verweigert", err);
@@ -52,6 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ===============================
 async function logout() {
     await api("/api/logout", { method: "POST" });
+ 
     location.href = "/";
 }
 
@@ -67,7 +68,7 @@ function zeigeMeldung(text, farbe) {
 
 function zeigeTestMeldung(text, farbe) {
  const container = document.getElementById('testmeldung');
-
+//document.getElementById("output").textContent = JSON.stringify(spiele, null, 2);
 // 1. Neues Element für die farbige Gruppe erstellen
 const neueGruppe = document.createElement('div');
 neueGruppe.style.color = farbe; // Ihre Wunschfarbe
@@ -79,7 +80,16 @@ let text1 = text;
 
 // 3. Texte mit \n (Newline) verknüpfen und zuweisen
 neueGruppe.textContent = `${text}\n`;
+// 4. Alles an den Hauptcontainer anhängen
+container.appendChild(neueGruppe);
+};
 
+function zeigeTestjson(data, farbe) {
+ const container = document.getElementById('testmeldung');
+const neueGruppe = document.createElement('div');
+neueGruppe.style.color = farbe; // Ihre Wunschfarbe
+neueGruppe.style.whiteSpace = "pre-line"; // Aktiviert die Erkennung von \n
+neueGruppe.textContent = JSON.stringify(data, null, 2);
 // 4. Alles an den Hauptcontainer anhängen
 container.appendChild(neueGruppe);
 };
@@ -93,18 +103,18 @@ async function ladeSpieleMitTipps() {
     const spiele = await api("/api/spiele");
     const tbody = $("tipTabelle");
     tbody.innerHTML = "";
-    zeigeTestMeldung(`${spiele.length} alle Spiele `, "blue");
+    //zeigeTestMeldung(`${spiele} alle Spiele `, "blue");
     
     const geplant = spiele.filter(s => s.statuswort === "geplant");
 
-    //zeigeTestMeldung(`${geplant.length} Spiele geladen`, "blue");
+    //zeigeTestjson (spiele, "blue");
     if (geplant.length === 0) {
         tbody.innerHTML = `<tr><td>Keine geplanten Spiele</td></tr>`;
-        zeigeTestMeldung(`${geplant.length} Spiele geplant`, "green");
+        //zeigeTestMeldung(`${geplant.length} Spiele geplant`, "green");
         return;
     }
 
-    zeigeTestMeldung(`${geplant.length} Spiele geladen`, "green");
+    //zeigeTestMeldung(`${geplant.length} Spiele geladen`, "green");
     
     geplant.forEach(s => {
         // Zeile 1: Datum + Status
@@ -346,8 +356,7 @@ async function ladeRangliste() {
 
     const tbody = $("ranglisteBody");
     tbody.innerHTML = "";
-
-    data.forEach((u, i) => {
+      data.forEach((u, i) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${i + 1}</td>

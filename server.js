@@ -26,8 +26,8 @@ const PORT = process.env.PORT || 8080;
 // ===============================
 // Konstanten
 // ===============================
-const SPIELZEIT_MINUTEN = 15;
-const NACHSPIELZEIT_MINUTEN = 1;
+const SPIELZEIT_MINUTEN = 3;
+const NACHSPIELZEIT_MINUTEN = 0;
 
 // ===============================
 // Middleware
@@ -118,34 +118,10 @@ cron.schedule("* * * * *", async () => {
 
 /*
 
-async function werteSpielAus(spielId) {
-    const spielRes = await pool.query(
-        "SELECT * FROM spiele WHERE id=$1",
-        [spielId]
-    );
-    const spiel = spielRes.rows[0];
-
-    const tipsRes = await pool.query(
-        "SELECT * FROM tips WHERE spiel_id=$1",
-        [spielId]
-    );
-
-    for (const tipp of tipsRes.rows) {
-        const punkte = berechnePunkte(tipp, spiel);
-
-        await pool.query(
-            "UPDATE tips SET punkte=$1 WHERE id=$2",
-            [punkte, tipp.id]
-        );
-    }
-
-    await pool.query(
-        "UPDATE spiele SET statuswort='ausgewertet' WHERE id=$1",
-        [spielId]
-    );
-}
 
 */
+
+
 app.get("/api/rangliste", requireLogin, async (req, res) => {
     const result = await pool.query(`
     SELECT u.name, COALESCE(SUM(t.punkte),0) AS punkte
@@ -158,20 +134,6 @@ app.get("/api/rangliste", requireLogin, async (req, res) => {
 });
 
 
-// ===============================
-// HTML Seiten (OHNE Auth)
-// ===============================
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get("/admin", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "admin_dashboard.html"));
-});
-
-app.get("/tippen.html", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "tippen.html"));
-});
 
 // ===============================
 // Session / Auth API
