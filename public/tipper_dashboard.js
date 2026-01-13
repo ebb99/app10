@@ -33,16 +33,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         await ladeTipps();
         await ladeRangliste();
         await ladeSpieleMitTipps();
-        $("saveAllTips").addEventListener("click", tippSpeichern);
+       // $("saveAllTips").addEventListener("click", tippSpeichern);
         $("logoutBtn")?.addEventListener("click", logout);
 
            //await ladeGeplanteSpiele();
        
         $("saveAllTips").addEventListener("click", alleTippsSpeichern);
-             
-
-
-
+        $("testBtn").addEventListener("click", TestMeldunglöschen);
         console.log("✅ Tipper Dashboard bereit");
 
     } catch (err) {
@@ -68,28 +65,50 @@ function zeigeMeldung(text, farbe) {
     el.style.color = farbe;
 }
 
+function zeigeTestMeldung(text, farbe) {
+ const container = document.getElementById('testmeldung');
+
+// 1. Neues Element für die farbige Gruppe erstellen
+const neueGruppe = document.createElement('div');
+neueGruppe.style.color = farbe; // Ihre Wunschfarbe
+neueGruppe.style.whiteSpace = "pre-line"; // Aktiviert die Erkennung von \n
+
+// 2. Variable Texte definieren
+let text1 = text;
 
 
+// 3. Texte mit \n (Newline) verknüpfen und zuweisen
+neueGruppe.textContent = `${text}\n`;
+
+// 4. Alles an den Hauptcontainer anhängen
+container.appendChild(neueGruppe);
+};
+
+function TestMeldunglöschen() {
+    const el = document.getElementById("testmeldung");
+    el.innerHTML = "";
+}
 
 async function ladeSpieleMitTipps() {
     const spiele = await api("/api/spiele");
     const tbody = $("tipTabelle");
     tbody.innerHTML = "";
-
+    zeigeTestMeldung(`${spiele.length} alle Spiele `, "blue");
+    
     const geplant = spiele.filter(s => s.statuswort === "geplant");
 
-
+    //zeigeTestMeldung(`${geplant.length} Spiele geladen`, "blue");
     if (geplant.length === 0) {
         tbody.innerHTML = `<tr><td>Keine geplanten Spiele</td></tr>`;
+        zeigeTestMeldung(`${geplant.length} Spiele geplant`, "green");
         return;
     }
 
-
+    zeigeTestMeldung(`${geplant.length} Spiele geladen`, "green");
     
     geplant.forEach(s => {
         // Zeile 1: Datum + Status
-        const tr1 = document.createElement("tr");
-        tr1.innerHTML = `
+        const tr1 = document.createElement("tr");        tr1.innerHTML = `
             <td colspan="3">
                 📅 ${new Date(s.anstoss).toLocaleString("de-DE")}
                 | Status: <b>${s.statuswort}</b>
@@ -221,6 +240,9 @@ async function name_ermitteln(requiredRole = null) {
 // ===============================
 // Spiele laden
 // ===============================
+
+/*
+
 async function ladeSpiele() {
     const spiele = await api("/api/spiele");
 
@@ -236,6 +258,9 @@ ${s.heimverein} : ${s.gastverein}`;
         });
 }
 
+*/
+
+/*
 // ===============================
 // Tipp speichern
 // ===============================
@@ -260,6 +285,8 @@ async function tippSpeichern() {
     ladeTipps();
     ladeRangliste();
 }
+*/
+
 
 // ===============================
 // Alle Tipps anzeigen

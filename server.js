@@ -26,8 +26,8 @@ const PORT = process.env.PORT || 8080;
 // ===============================
 // Konstanten
 // ===============================
-const SPIELZEIT_MINUTEN = 3;
-const NACHSPIELZEIT_MINUTEN = 2;
+const SPIELZEIT_MINUTEN = 15;
+const NACHSPIELZEIT_MINUTEN = 1;
 
 // ===============================
 // Middleware
