@@ -34,6 +34,7 @@ const NACHSPIELZEIT_MINUTEN = 0;
 // ===============================
 app.use(express.json());
 app.use(express.static("public"));
+app.use("/bilder", express.static("bilder"));
 
 app.use(session({
     secret: process.env.SESSION_SECRET || "super-geheim",
