@@ -321,33 +321,42 @@ async function ladeTipps() {
         spieleMap[t.spiel_id].tips.push(t);
     });
 
-    Object.values(spieleMap).forEach(gruppe => {
-        const div = document.createElement("div");
-        div.className = "spiel";
+ Object.values(spieleMap)
+  .sort((a, b) => new Date(b.spiel.anstoss) - new Date(a.spiel.anstoss))
+  .forEach(gruppe => {
 
-        div.innerHTML = `
-            <strong>${gruppe.spiel.heimverein} – ${gruppe.spiel.gastverein}</strong>
-            <div class="status">
-                ${new Date(gruppe.spiel.anstoss).toLocaleString("de-DE")}
-                | Status: ${gruppe.spiel.statuswort}
-                | Ergebnis: ${gruppe.spiel.heimtore ?? "-"} :
-                  ${gruppe.spiel.gasttore ?? "-"}
-            </div>
-        `;
+    // Tipps: letzte zuerst
+    gruppe.tips.sort(
+      (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+    );
 
-        gruppe.tips.forEach(tipp => {
-            const row = document.createElement("div");
-            row.className = "tipp";
-            row.innerHTML = `
-                <span>${tipp.user_name}</span>
-                <span>${tipp.heimtipp} : ${tipp.gasttipp}</span>
-                <span>${tipp.punkte ?? 0} P</span>
-            `;
-            div.appendChild(row);
-        });
+    const div = document.createElement("div");
+    div.className = "spiel";
 
-        container.appendChild(div);
+    div.innerHTML = `
+      <strong>${gruppe.spiel.heimverein} – ${gruppe.spiel.gastverein}</strong>
+      <div class="status">
+        ${new Date(gruppe.spiel.anstoss).toLocaleString("de-DE")}
+        | Status: ${gruppe.spiel.statuswort}
+        | Ergebnis: ${gruppe.spiel.heimtore ?? "-"} :
+          ${gruppe.spiel.gasttore ?? "-"}
+      </div>
+    `;
+
+    gruppe.tips.forEach(tipp => {
+      const row = document.createElement("div");
+      row.className = "tipp";
+      row.innerHTML = `
+        <span>${tipp.user_name}</span>
+        <span>${tipp.heimtipp} : ${tipp.gasttipp}</span>
+        <span>${tipp.punkte ?? 0} P</span>
+      `;
+      div.appendChild(row);
     });
+
+    container.appendChild(div);
+  });
+
 }
 
 // ===============================
