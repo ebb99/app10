@@ -129,8 +129,9 @@ async function ladeSpieleMitTipps() {
 
         // Zeile 2: Heimverein + Tipp
         const tr2 = document.createElement("tr");
+        const logoh = s.heimverein+"_logo.png"
         tr2.innerHTML = `
-            <td width="40%"><b>${s.heimverein}</b></td>
+            <td width="40%"><b><img src="/bilder/${logoh}" alt="logo"> ${s.heimverein}</b></td>
             <td width="20%">Heim</td>
             <td width="40%">
                 <input type="number"
@@ -143,8 +144,9 @@ async function ladeSpieleMitTipps() {
 
         // Zeile 3: Gastverein + Tipp
         const tr3 = document.createElement("tr");
+        const logog = s.gastverein+"_logo.png"
         tr3.innerHTML = `
-            <td><b>${s.gastverein}</b></td>
+            <td><b><img src="/bilder/${logog}" alt="logo">  ${s.gastverein}</b></td>
             <td>Gast</td>
             <td>
                 <input type="number"
@@ -347,6 +349,7 @@ async function ladeTipps() {
       const row = document.createElement("div");
       row.className = "tipp";
       row.innerHTML = `
+
         <span>${tipp.user_name}</span>
         <span>${tipp.heimtipp} : ${tipp.gasttipp}</span>
         <span>${tipp.punkte ?? 0} P</span>

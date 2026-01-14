@@ -113,3 +113,9 @@
         #saveAllTips {
           margin-top: 10px;
         }
+        td img {
+        vertical-align: middle;
+        margin-right: 2px;  
+        width:30px;
+        height:auto;
+        }
